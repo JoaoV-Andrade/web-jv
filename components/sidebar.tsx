@@ -8,6 +8,7 @@ import {
   Calendar,
   Plane,
   Heart,
+  TrendingDown,
   LogOut,
 } from "lucide-react"
 import { signOut } from "next-auth/react"
@@ -19,7 +20,8 @@ const NAV = [
   { href: "/projetos",  label: "Projetos",  icon: FolderKanban    },
   { href: "/agenda",    label: "Agenda",    icon: Calendar        },
   { href: "/viagens",   label: "Viagens",   icon: Plane           },
-  { href: "/wishlist",  label: "Wishlist",  icon: Heart           },
+  { href: "/wishlist",   label: "Wishlist",   icon: Heart        },
+  { href: "/passagens",  label: "Passagens",  icon: TrendingDown },
 ]
 
 export function Sidebar() {

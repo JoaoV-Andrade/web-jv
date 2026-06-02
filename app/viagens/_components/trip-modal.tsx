@@ -6,12 +6,14 @@ import { X, Plus, Trash2 } from "lucide-react"
 type Trip = {
   id: string
   destination: string
-  startDate: string
-  endDate: string
+  startDate: string | null
+  endDate: string | null
   status: string
   notes: string | null
   links: string[]
   calendarEventId: string | null
+  outboundFlight: string | null
+  returnFlight: string | null
 }
 
 type Props = {
@@ -21,7 +23,8 @@ type Props = {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  PLANNED: "Planejada",
+  DREAMING:  "Quero ir",
+  PLANNED:   "Planejada",
   CONFIRMED: "Confirmada",
   COMPLETED: "Realizada",
   CANCELLED: "Cancelada",
@@ -32,14 +35,19 @@ export function TripModal({ trip, onClose, onSaved }: Props) {
   const today = new Date().toISOString().slice(0, 10)
 
   const [destination, setDestination] = useState(trip?.destination ?? "")
-  const [startDate, setStartDate] = useState(trip?.startDate.slice(0, 10) ?? today)
-  const [endDate, setEndDate] = useState(trip?.endDate.slice(0, 10) ?? today)
+  const [startDate, setStartDate] = useState(trip?.startDate?.slice(0, 10) ?? today)
+  const [endDate, setEndDate] = useState(trip?.endDate?.slice(0, 10) ?? today)
   const [status, setStatus] = useState(trip?.status ?? "PLANNED")
   const [notes, setNotes] = useState(trip?.notes ?? "")
   const [links, setLinks] = useState<string[]>(trip?.links ?? [])
   const [newLink, setNewLink] = useState("")
+  const [outboundFlight, setOutboundFlight] = useState(trip?.outboundFlight ?? "")
+  const [returnFlight, setReturnFlight] = useState(trip?.returnFlight ?? "")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+
+  const isDreaming = status === "DREAMING"
+  const isConfirmed = status === "CONFIRMED"
 
   function addLink() {
     const url = newLink.trim()
@@ -51,8 +59,14 @@ export function TripModal({ trip, onClose, onSaved }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!destination.trim()) { setError("Destino obrigatório"); return }
-    if (!startDate || !endDate) { setError("Datas obrigatórias"); return }
-    if (endDate < startDate) { setError("Data de volta não pode ser antes da ida"); return }
+    if (!isDreaming) {
+      if (!startDate || !endDate) { setError("Datas obrigatórias"); return }
+      if (endDate < startDate) { setError("Data de volta não pode ser antes da ida"); return }
+    }
+    if (isConfirmed) {
+      if (!outboundFlight.trim()) { setError("Número do voo de ida obrigatório"); return }
+      if (!returnFlight.trim()) { setError("Número do voo de volta obrigatório"); return }
+    }
 
     setSaving(true)
     setError("")
@@ -63,11 +77,13 @@ export function TripModal({ trip, onClose, onSaved }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           destination: destination.trim(),
-          startDate,
-          endDate,
+          startDate: isDreaming ? null : startDate,
+          endDate: isDreaming ? null : endDate,
           status,
           notes: notes || null,
           links,
+          outboundFlight: outboundFlight.trim() || null,
+          returnFlight: returnFlight.trim() || null,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? "Erro ao salvar")
@@ -111,29 +127,6 @@ export function TripModal({ trip, onClose, onSaved }: Props) {
             />
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-text-muted mb-1">Ida *</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); if (e.target.value > endDate) setEndDate(e.target.value) }}
-                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-[var(--radius-sm)] text-text focus:outline-none focus:border-accent"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-text-muted mb-1">Volta *</label>
-              <input
-                type="date"
-                value={endDate}
-                min={startDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-[var(--radius-sm)] text-text focus:outline-none focus:border-accent"
-              />
-            </div>
-          </div>
-
           {/* Status */}
           <div>
             <label className="block text-xs text-text-muted mb-1">Status</label>
@@ -147,6 +140,58 @@ export function TripModal({ trip, onClose, onSaved }: Props) {
               ))}
             </select>
           </div>
+
+          {/* Dates — hidden for DREAMING */}
+          {!isDreaming && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Ida *</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => { setStartDate(e.target.value); if (e.target.value > endDate) setEndDate(e.target.value) }}
+                  className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-[var(--radius-sm)] text-text focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Volta *</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-[var(--radius-sm)] text-text focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Flights — shown and required for CONFIRMED */}
+          {isConfirmed && (
+            <div className="space-y-3 p-3 bg-surface-2 rounded-[var(--radius-sm)] border border-border">
+              <p className="text-xs font-medium text-text-muted uppercase tracking-wide">Voos confirmados</p>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Voo de ida *</label>
+                <input
+                  type="text"
+                  value={outboundFlight}
+                  onChange={(e) => setOutboundFlight(e.target.value)}
+                  placeholder="Ex: LA 3541, G3 1234..."
+                  className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Voo de volta *</label>
+                <input
+                  type="text"
+                  value={returnFlight}
+                  onChange={(e) => setReturnFlight(e.target.value)}
+                  placeholder="Ex: LA 3542, G3 5678..."
+                  className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-[var(--radius-sm)] text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div>

@@ -8,15 +8,18 @@ import { Plus, Pencil, Trash2, Plane, CalendarDays, ExternalLink } from "lucide-
 type Trip = {
   id: string
   destination: string
-  startDate: string
-  endDate: string
+  startDate: string | null
+  endDate: string | null
   status: string
   notes: string | null
   links: string[]
   calendarEventId: string | null
+  outboundFlight: string | null
+  returnFlight: string | null
 }
 
 const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
+  DREAMING:  { label: "Quero ir",   classes: "bg-warning/10 text-warning" },
   PLANNED:   { label: "Planejada",  classes: "bg-accent-soft text-accent" },
   CONFIRMED: { label: "Confirmada", classes: "bg-success/10 text-success" },
   COMPLETED: { label: "Realizada",  classes: "bg-surface-2 text-text-muted" },
@@ -65,18 +68,29 @@ export default function ViagensPage() {
   }
 
   const now = new Date().toISOString()
-  const upcoming = trips.filter(
-    (t) => (t.status === "PLANNED" || t.status === "CONFIRMED") && t.endDate >= now
-  ).sort((a, b) => a.startDate.localeCompare(b.startDate))
 
-  const history = trips.filter(
-    (t) => t.status === "COMPLETED" || t.status === "CANCELLED" || t.endDate < now
-  ).sort((a, b) => b.startDate.localeCompare(a.startDate))
+  const upcoming = trips
+    .filter((t) =>
+      (t.status === "DREAMING" || t.status === "PLANNED" || t.status === "CONFIRMED") &&
+      (!t.endDate || t.endDate >= now)
+    )
+    .sort((a, b) => {
+      // trips without dates (DREAMING) go after dated trips
+      if (!a.startDate && !b.startDate) return 0
+      if (!a.startDate) return 1
+      if (!b.startDate) return -1
+      return a.startDate.localeCompare(b.startDate)
+    })
+
+  const history = trips
+    .filter((t) => t.status === "COMPLETED" || t.status === "CANCELLED" || (t.endDate && t.endDate < now))
+    .sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? ""))
 
   function TripCard({ trip }: { trip: Trip }) {
     const cfg = STATUS_CONFIG[trip.status] ?? STATUS_CONFIG.PLANNED
-    const days = tripDays(trip.startDate, trip.endDate)
     const cancelled = trip.status === "CANCELLED"
+    const hasDates = trip.startDate && trip.endDate
+    const days = hasDates ? tripDays(trip.startDate!, trip.endDate!) : null
 
     return (
       <div
@@ -102,10 +116,30 @@ export default function ViagensPage() {
                 )}
               </div>
 
-              <p className="text-xs text-text-muted mt-0.5">
-                {fmtDate(trip.startDate)} → {fmtDate(trip.endDate)}
-                <span className="ml-1 text-text-muted/70">· {days} {days === 1 ? "dia" : "dias"}</span>
-              </p>
+              {hasDates ? (
+                <p className="text-xs text-text-muted mt-0.5">
+                  {fmtDate(trip.startDate!)} → {fmtDate(trip.endDate!)}
+                  <span className="ml-1 text-text-muted/70">· {days} {days === 1 ? "dia" : "dias"}</span>
+                </p>
+              ) : (
+                <p className="text-xs text-text-muted/60 mt-0.5 italic">Datas a definir</p>
+              )}
+
+              {/* Flights */}
+              {(trip.outboundFlight || trip.returnFlight) && (
+                <div className="flex flex-wrap gap-3 mt-1.5">
+                  {trip.outboundFlight && (
+                    <span className="text-xs text-text-muted">
+                      ✈ ida: <span className="font-medium text-text">{trip.outboundFlight}</span>
+                    </span>
+                  )}
+                  {trip.returnFlight && (
+                    <span className="text-xs text-text-muted">
+                      ✈ volta: <span className="font-medium text-text">{trip.returnFlight}</span>
+                    </span>
+                  )}
+                </div>
+              )}
 
               {trip.notes && (
                 <p className="text-xs text-text-muted mt-2 line-clamp-2 whitespace-pre-line">

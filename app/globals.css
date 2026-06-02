@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+/* ─── Tema claro ──────────────────────────────────────────────────────────── */
+:root {
+  --bg:              #FAF9F5;
+  --surface:         #FFFFFF;
+  --surface-2:       #F2F0E9;
+  --border:          #E4E1D7;
+  --text:            #20201D;
+  --text-muted:      #6E6C65;
+  --accent:          #6E56CF;
+  --accent-hover:    #5A43B4;
+  --accent-soft:     #ECE7FA;
+  --accent-contrast: #FFFFFF;
+  --success:         #4F9D69;
+  --warning:         #C8922A;
+  --danger:          #C2503C;
+  --radius:          14px;
+  --radius-sm:       10px;
+  --shadow:          0 1px 2px rgba(32,32,29,.04), 0 4px 16px rgba(32,32,29,.06);
+}
+
+/* ─── Tema escuro ─────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:              #1F1E1C;
+  --surface:         #2A2926;
+  --surface-2:       #33312D;
+  --border:          #3D3B36;
+  --text:            #ECEAE3;
+  --text-muted:      #A3A099;
+  --accent:          #9A82F0;
+  --accent-hover:    #B29FF5;
+  --accent-soft:     #322B4D;
+  --accent-contrast: #1F1E1C;
+  --success:         #5FB67E;
+  --warning:         #E0A93C;
+  --danger:          #E0735B;
+}
+
+/* ─── Tailwind v4: expõe tokens como utilities ────────────────────────────── */
+@theme inline {
+  --color-bg:              var(--bg);
+  --color-surface:         var(--surface);
+  --color-surface-2:       var(--surface-2);
+  --color-border:          var(--border);
+  --color-text:            var(--text);
+  --color-text-muted:      var(--text-muted);
+  --color-accent:          var(--accent);
+  --color-accent-hover:    var(--accent-hover);
+  --color-accent-soft:     var(--accent-soft);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-success:         var(--success);
+  --color-warning:         var(--warning);
+  --color-danger:          var(--danger);
+  --font-sans:             var(--font-hanken);
+  --font-serif:            var(--font-fraunces);
+  --radius-card:           var(--radius);
+  --radius-input:          var(--radius-sm);
+}
+
+/* ─── Base ────────────────────────────────────────────────────────────────── */
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  border-color: var(--border);
+  box-sizing: border-box;
+}

@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Auth ──────────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Armazena os tokens OAuth do Google para uso no cron (sem usuário logado)
+model OAuthToken {
+  id           String   @id @default(cuid())
+  provider     String   @unique
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  updatedAt    DateTime @updatedAt
+}
+
+// ─── Finanças ──────────────────────────────────────────────────────────────────
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum RecurrenceType {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model FinancialAccount {
+  id           String        @id @default(cuid())
+  name         String
+  type         String
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  name         String
+  color        String?
+  icon         String?
+  budgets      Budget[]
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Transaction {
+  id          String           @id @default(cuid())
+  type        TransactionType
+  amount      Decimal          @db.Decimal(10, 2)
+  date        DateTime
+  description String?
+  recurrence  RecurrenceType   @default(NONE)
+  accountId   String
+  account     FinancialAccount @relation(fields: [accountId], references: [id])
+  categoryId  String?
+  category    Category?        @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  month      Int
+  year       Int
+  amount     Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([categoryId, month, year])
+}
+
+// ─── Projetos ──────────────────────────────────────────────────────────────────
+
+enum ProjectStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Project {
+  id              String        @id @default(cuid())
+  name            String
+  description     String?
+  status          ProjectStatus @default(ACTIVE)
+  deadline        DateTime?
+  calendarEventId String?
+  tasks           Task[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Task {
+  id              String     @id @default(cuid())
+  projectId       String
+  project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  status          TaskStatus @default(TODO)
+  priority        Priority   @default(MEDIUM)
+  deadline        DateTime?
+  calendarEventId String?
+  position        Int        @default(0)
+  subtasks        Subtask[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Subtask {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title     String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Viagens ───────────────────────────────────────────────────────────────────
+
+enum TripStatus {
+  PLANNED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+model Trip {
+  id              String     @id @default(cuid())
+  destination     String
+  startDate       DateTime
+  endDate         DateTime
+  status          TripStatus @default(PLANNED)
+  notes           String?
+  links           String[]
+  calendarEventId String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model WatchedRoute {
+  id                String         @id @default(cuid())
+  origin            String
+  destination       String
+  departureDateFrom DateTime
+  departureDateTo   DateTime
+  passengers        Int            @default(1)
+  targetPrice       Decimal?       @db.Decimal(10, 2)
+  movingAvgDays     Int?
+  lastNotifiedAt    DateTime?
+  lastNotifiedPrice Decimal?       @db.Decimal(10, 2)
+  priceHistory      PriceHistory[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model PriceHistory {
+  id        String       @id @default(cuid())
+  routeId   String
+  route     WatchedRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  price     Decimal      @db.Decimal(10, 2)
+  currency  String       @default("BRL")
+  checkedAt DateTime     @default(now())
+}
+
+// ─── Wishlist ──────────────────────────────────────────────────────────────────
+
+enum WishlistStatus {
+  WANTED
+  BOUGHT
+}
+
+model WishlistItem {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  url         String?
+  imageUrl    String?
+  price       Decimal?       @db.Decimal(10, 2)
+  status      WishlistStatus @default(WANTED)
+  category    String?
+  priority    Priority       @default(MEDIUM)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}

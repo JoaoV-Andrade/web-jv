@@ -1,5 +1,5 @@
 import { db } from "@/lib/db"
-import { searchCheapestPrice, getDatesToCheck } from "@/lib/amadeus"
+import { searchCheapestPrice } from "@/lib/travelpayouts"
 import { sendTelegramMessage } from "@/lib/telegram"
 
 export const dynamic = "force-dynamic"
@@ -23,26 +23,27 @@ export async function GET(req: Request) {
   })
 
   const results: { id: string; route: string; price: number | null; notified: boolean }[] = []
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date()
 
   for (const route of routes) {
     const routeLabel = `${route.origin}→${route.destination}`
 
-    // Skip expired routes
-    if (route.departureDateTo.toISOString().slice(0, 10) < today) {
+    // Skip routes whose entire date window is in the past
+    if (route.departureDateTo < today) {
       results.push({ id: route.id, route: routeLabel, price: null, notified: false })
       continue
     }
 
-    const dates = getDatesToCheck(route.departureDateFrom, route.departureDateTo)
-    let minPrice: number | null = null
-
-    for (const date of dates) {
-      const price = await searchCheapestPrice(route.origin, route.destination, date, route.passengers)
-      if (price !== null && (minPrice === null || price < minPrice)) minPrice = price
-    }
+    const minPrice = await searchCheapestPrice(
+      route.origin,
+      route.destination,
+      route.departureDateFrom,
+      route.departureDateTo,
+      route.passengers,
+    )
 
     if (minPrice === null) {
+      // No data from Travelpayouts cache for this route — skip silently (already logged inside lib)
       results.push({ id: route.id, route: routeLabel, price: null, notified: false })
       continue
     }
@@ -51,7 +52,7 @@ export async function GET(req: Request) {
       data: { routeId: route.id, price: minPrice, currency: "BRL" },
     })
 
-    // Determine if notification should be sent
+    // Determine if notification should fire
     let shouldNotify = false
     let reason = ""
 
@@ -76,7 +77,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // Throttle: skip if notified in the last 23h
+    // Throttle: skip if already notified in the last 23h
     if (shouldNotify && route.lastNotifiedAt) {
       const hoursSince = (Date.now() - route.lastNotifiedAt.getTime()) / 3_600_000
       if (hoursSince < 23) shouldNotify = false

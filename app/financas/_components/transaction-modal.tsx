@@ -5,6 +5,14 @@ import { X, Plus } from "lucide-react"
 
 type Account = { id: string; name: string; type: string }
 type Category = { id: string; name: string; color: string | null }
+type Installment = {
+  id: string
+  name: string
+  store: string | null
+  installmentAmount: number
+  totalInstallments: number
+  paidInstallments: number
+}
 type Transaction = {
   id: string
   type: "INCOME" | "EXPENSE"
@@ -14,12 +22,14 @@ type Transaction = {
   accountId: string
   categoryId: string | null
   recurrence: string
+  installmentId: string | null
 }
 
 type Props = {
   transaction?: Transaction
   accounts: Account[]
   categories: Category[]
+  installments?: Installment[]
   onClose: () => void
   onSaved: () => void
   onAccountCreated: (a: Account) => void
@@ -46,6 +56,7 @@ export function TransactionModal({
   transaction,
   accounts,
   categories,
+  installments = [],
   onClose,
   onSaved,
   onAccountCreated,
@@ -60,6 +71,7 @@ export function TransactionModal({
   const [accountId, setAccountId] = useState(transaction?.accountId ?? accounts[0]?.id ?? "")
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? "")
   const [recurrence, setRecurrence] = useState(transaction?.recurrence ?? "NONE")
+  const [installmentId, setInstallmentId] = useState(transaction?.installmentId ?? "")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
@@ -98,6 +110,7 @@ export function TransactionModal({
           accountId,
           categoryId: categoryId || null,
           recurrence,
+          installmentId: installmentId || null,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? "Erro ao salvar")
@@ -357,6 +370,32 @@ export function TransactionModal({
               </div>
             )}
           </div>
+
+          {/* Installment link — only for expenses */}
+          {type === "EXPENSE" && installments.length > 0 && (
+            <div>
+              <label className="block text-xs text-text-muted mb-1">Parcelamento</label>
+              <select
+                value={installmentId}
+                onChange={(e) => {
+                  const id = e.target.value
+                  setInstallmentId(id)
+                  if (id) {
+                    const inst = installments.find((i) => i.id === id)
+                    if (inst && !amount) setAmount(String(inst.installmentAmount))
+                  }
+                }}
+                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-[var(--radius-sm)] text-text focus:outline-none focus:border-accent"
+              >
+                <option value="">Nenhum</option>
+                {installments.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name} — parcela {i.paidInstallments + 1}/{i.totalInstallments}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Recurrence */}
           <div>

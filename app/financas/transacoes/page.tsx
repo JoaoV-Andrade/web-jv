@@ -8,6 +8,14 @@ import Link from "next/link"
 
 type Account = { id: string; name: string; type: string }
 type Category = { id: string; name: string; color: string | null }
+type Installment = {
+  id: string
+  name: string
+  store: string | null
+  installmentAmount: number
+  totalInstallments: number
+  paidInstallments: number
+}
 type Transaction = {
   id: string
   type: "INCOME" | "EXPENSE"
@@ -19,6 +27,7 @@ type Transaction = {
   categoryId: string | null
   category: Category | null
   recurrence: string
+  installmentId: string | null
 }
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -38,6 +47,7 @@ export default function TransacoesPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [installments, setInstallments] = useState<Installment[]>([])
   const [loading, setLoading] = useState(true)
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -48,15 +58,17 @@ export default function TransacoesPage() {
     const params = new URLSearchParams({ month: String(month), year: String(year) })
     if (typeFilter !== "ALL") params.set("type", typeFilter)
 
-    const [txRes, accRes, catRes] = await Promise.all([
+    const [txRes, accRes, catRes, instRes] = await Promise.all([
       fetch(`/api/financas/transactions?${params}`),
       fetch("/api/financas/accounts"),
       fetch("/api/financas/categories"),
+      fetch("/api/financas/installments?status=ACTIVE"),
     ])
 
     if (txRes.ok) setTransactions(await txRes.json())
     if (accRes.ok) setAccounts(await accRes.json())
     if (catRes.ok) setCategories(await catRes.json())
+    if (instRes.ok) setInstallments(await instRes.json())
     setLoading(false)
   }, [month, year, typeFilter])
 
@@ -268,6 +280,7 @@ export default function TransacoesPage() {
           transaction={editing ?? undefined}
           accounts={accounts}
           categories={categories}
+          installments={installments}
           onClose={() => setModalOpen(false)}
           onSaved={() => { setModalOpen(false); fetchAll() }}
           onAccountCreated={(a) => setAccounts((prev) => [...prev, a])}

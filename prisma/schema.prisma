@@ -101,18 +101,42 @@ model Category {
 }
 
 model Transaction {
-  id          String           @id @default(cuid())
-  type        TransactionType
-  amount      Decimal          @db.Decimal(10, 2)
-  date        DateTime
-  description String?
-  recurrence  RecurrenceType   @default(NONE)
-  accountId   String
-  account     FinancialAccount @relation(fields: [accountId], references: [id])
-  categoryId  String?
-  category    Category?        @relation(fields: [categoryId], references: [id])
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  type           TransactionType
+  amount         Decimal          @db.Decimal(10, 2)
+  date           DateTime
+  description    String?
+  recurrence     RecurrenceType   @default(NONE)
+  accountId      String
+  account        FinancialAccount @relation(fields: [accountId], references: [id])
+  categoryId     String?
+  category       Category?        @relation(fields: [categoryId], references: [id])
+  installmentId  String?
+  installment    Installment?     @relation(fields: [installmentId], references: [id], onDelete: SetNull)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+enum InstallmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Installment {
+  id                String            @id @default(cuid())
+  name              String
+  store             String?
+  totalAmount       Decimal           @db.Decimal(10, 2)
+  installmentAmount Decimal           @db.Decimal(10, 2)
+  totalInstallments Int
+  paidInstallments  Int               @default(0)
+  dueDay            Int?
+  startDate         DateTime
+  status            InstallmentStatus @default(ACTIVE)
+  transactions      Transaction[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model Budget {

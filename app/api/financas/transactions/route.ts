@@ -49,7 +49,8 @@ export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { type, amount, date, description, accountId, categoryId, recurrence } = await req.json()
+  const { type, amount, date, description, accountId, categoryId, recurrence, installmentId } =
+    await req.json()
 
   if (!type || !amount || !date || !accountId) {
     return Response.json({ error: "Campos obrigatórios faltando" }, { status: 400 })
@@ -64,9 +65,24 @@ export async function POST(req: Request) {
       accountId,
       categoryId: categoryId || null,
       recurrence: recurrence || "NONE",
+      installmentId: installmentId || null,
     },
     include: { account: true, category: true },
   })
+
+  if (installmentId) {
+    const inst = await db.installment.findUnique({ where: { id: installmentId } })
+    if (inst) {
+      const newPaid = inst.paidInstallments + 1
+      await db.installment.update({
+        where: { id: installmentId },
+        data: {
+          paidInstallments: newPaid,
+          status: newPaid >= inst.totalInstallments ? "COMPLETED" : "ACTIVE",
+        },
+      })
+    }
+  }
 
   return Response.json(
     {

@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell"
 import { SummaryCards } from "./_components/summary-cards"
 import { MonthlyChart } from "./_components/monthly-chart"
 import { BudgetProgress } from "./_components/budget-progress"
+import { InstallmentsSection } from "./_components/installments-section"
 import Link from "next/link"
 
 const fmtDate = (d: Date) =>
@@ -89,6 +90,23 @@ export default async function FinancasPage() {
     })
   )
 
+  // Parcelamentos
+  const installmentsRaw = await db.installment.findMany({
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+  })
+  const installmentData = installmentsRaw.map((i) => ({
+    id: i.id,
+    name: i.name,
+    store: i.store,
+    totalAmount: Number(i.totalAmount),
+    installmentAmount: Number(i.installmentAmount),
+    totalInstallments: i.totalInstallments,
+    paidInstallments: i.paidInstallments,
+    dueDay: i.dueDay,
+    startDate: i.startDate.toISOString(),
+    status: i.status as string,
+  }))
+
   // Últimas transações
   const recent = await db.transaction.findMany({
     take: 5,
@@ -120,6 +138,8 @@ export default async function FinancasPage() {
         <MonthlyChart data={monthlyData} />
 
         {budgetData.length > 0 && <BudgetProgress budgets={budgetData} />}
+
+        <InstallmentsSection initialInstallments={installmentData} />
 
         {/* Últimas transações */}
         <div

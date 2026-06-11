@@ -261,6 +261,27 @@ model PriceHistory {
   checkedAt DateTime     @default(now())
 }
 
+// ─── Livros ────────────────────────────────────────────────────────────────────
+
+enum BookStatus {
+  WANT_TO_READ
+  READING
+  READ
+}
+
+model Book {
+  id          String     @id @default(cuid())
+  title       String
+  author      String?
+  description String?
+  status      BookStatus @default(WANT_TO_READ)
+  rating      Int?
+  coverUrl    String?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
 // ─── Wishlist ──────────────────────────────────────────────────────────────────
 
 enum WishlistStatus {

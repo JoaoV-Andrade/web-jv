@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   Wallet,
-  FolderKanban,
+  BookOpen,
   Calendar,
   Plane,
   Heart,
@@ -17,7 +17,7 @@ import { ThemeToggle } from "./theme-toggle"
 const NAV = [
   { href: "/",          label: "Início",    icon: LayoutDashboard },
   { href: "/financas",  label: "Finanças",  icon: Wallet          },
-  { href: "/projetos",  label: "Projetos",  icon: FolderKanban    },
+  { href: "/livros",    label: "Livros",    icon: BookOpen        },
   { href: "/agenda",    label: "Agenda",    icon: Calendar        },
   { href: "/viagens",   label: "Viagens",   icon: Plane           },
   { href: "/wishlist",   label: "Wishlist",   icon: Heart        },

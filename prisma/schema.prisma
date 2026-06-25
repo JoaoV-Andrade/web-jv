@@ -101,20 +101,22 @@ model Category {
 }
 
 model Transaction {
-  id             String           @id @default(cuid())
-  type           TransactionType
-  amount         Decimal          @db.Decimal(10, 2)
-  date           DateTime
-  description    String?
-  recurrence     RecurrenceType   @default(NONE)
-  accountId      String
-  account        FinancialAccount @relation(fields: [accountId], references: [id])
-  categoryId     String?
-  category       Category?        @relation(fields: [categoryId], references: [id])
-  installmentId  String?
-  installment    Installment?     @relation(fields: [installmentId], references: [id], onDelete: SetNull)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                 String           @id @default(cuid())
+  type               TransactionType
+  amount             Decimal          @db.Decimal(10, 2)
+  date               DateTime
+  description        String?
+  recurrence         RecurrenceType   @default(NONE)
+  accountId          String
+  account            FinancialAccount @relation(fields: [accountId], references: [id])
+  categoryId         String?
+  category           Category?        @relation(fields: [categoryId], references: [id])
+  installmentId      String?
+  installment        Installment?     @relation(fields: [installmentId], references: [id], onDelete: SetNull)
+  monthlyPaymentId   String?
+  monthlyPayment     MonthlyPayment?  @relation(fields: [monthlyPaymentId], references: [id], onDelete: SetNull)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 }
 
 enum InstallmentStatus {
@@ -137,6 +139,16 @@ model Installment {
   transactions      Transaction[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+}
+
+model MonthlyPayment {
+  id           String        @id @default(cuid())
+  name         String
+  amount       Decimal       @db.Decimal(10, 2)
+  dueDay       Int?
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model Budget {

@@ -7,6 +7,7 @@ import { SummaryCards } from "./_components/summary-cards"
 import { MonthlyChart } from "./_components/monthly-chart"
 import { BudgetProgress } from "./_components/budget-progress"
 import { InstallmentsSection } from "./_components/installments-section"
+import { MonthlyPaymentsSection } from "./_components/monthly-payments-section"
 import Link from "next/link"
 
 const fmtDate = (d: Date) =>
@@ -107,6 +108,26 @@ export default async function FinancasPage() {
     status: i.status as string,
   }))
 
+  // Receitas mensais recorrentes
+  const monthlyPaymentsRaw = await db.monthlyPayment.findMany({
+    include: {
+      transactions: {
+        where: { date: { gte: monthStart, lt: monthEnd }, type: "INCOME" },
+        select: { id: true },
+        take: 1,
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  })
+  const monthlyPaymentData = monthlyPaymentsRaw.map((p) => ({
+    id: p.id,
+    name: p.name,
+    amount: Number(p.amount),
+    dueDay: p.dueDay,
+    paidThisMonth: p.transactions.length > 0,
+    transactionId: p.transactions[0]?.id ?? null,
+  }))
+
   // Últimas transações
   const recent = await db.transaction.findMany({
     take: 5,
@@ -138,6 +159,8 @@ export default async function FinancasPage() {
         <MonthlyChart data={monthlyData} />
 
         {budgetData.length > 0 && <BudgetProgress budgets={budgetData} />}
+
+        <MonthlyPaymentsSection initialPayments={monthlyPaymentData} />
 
         <InstallmentsSection initialInstallments={installmentData} />
 

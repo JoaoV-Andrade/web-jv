@@ -49,7 +49,7 @@ export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { type, amount, date, description, accountId, categoryId, recurrence, installmentId, monthlyPaymentId } =
+  const { type, amount, date, description, accountId, categoryId, recurrence, installmentId, monthlyPaymentId, mei } =
     await req.json()
 
   if (!type || !amount || !date || !accountId) {
@@ -67,6 +67,7 @@ export async function POST(req: Request) {
       recurrence: recurrence || "NONE",
       installmentId: installmentId || null,
       monthlyPaymentId: monthlyPaymentId || null,
+      mei: type === "INCOME" ? !!mei : false,
     },
     include: { account: true, category: true },
   })

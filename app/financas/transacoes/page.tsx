@@ -28,6 +28,7 @@ type Transaction = {
   category: Category | null
   recurrence: string
   installmentId: string | null
+  mei?: boolean
 }
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -236,6 +237,11 @@ export default function TransacoesPage() {
                         <span className="text-text truncate max-w-40">
                           {t.description || "—"}
                         </span>
+                        {t.mei && (
+                          <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent-soft text-accent">
+                            MEI
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-text-muted hidden sm:table-cell">

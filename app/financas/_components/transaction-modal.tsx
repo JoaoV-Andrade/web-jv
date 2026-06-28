@@ -23,6 +23,7 @@ type Transaction = {
   categoryId: string | null
   recurrence: string
   installmentId: string | null
+  mei?: boolean
 }
 
 type Props = {
@@ -72,6 +73,7 @@ export function TransactionModal({
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? "")
   const [recurrence, setRecurrence] = useState(transaction?.recurrence ?? "NONE")
   const [installmentId, setInstallmentId] = useState(transaction?.installmentId ?? "")
+  const [mei, setMei] = useState(transaction?.mei ?? false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
@@ -111,6 +113,7 @@ export function TransactionModal({
           categoryId: categoryId || null,
           recurrence,
           installmentId: installmentId || null,
+          mei: type === "INCOME" ? mei : false,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? "Erro ao salvar")
@@ -410,6 +413,19 @@ export function TransactionModal({
               ))}
             </select>
           </div>
+
+          {/* MEI — apenas para receitas */}
+          {type === "INCOME" && (
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={mei}
+                onChange={(e) => setMei(e.target.checked)}
+                className="h-4 w-4 rounded border-border text-accent focus:ring-accent accent-[var(--accent)]"
+              />
+              <span className="text-sm text-text">Declarado no MEI</span>
+            </label>
+          )}
 
           {error && <p className="text-xs text-danger">{error}</p>}
 

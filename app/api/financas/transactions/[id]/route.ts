@@ -7,7 +7,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
-  const { type, amount, date, description, accountId, categoryId, recurrence, installmentId } =
+  const { type, amount, date, description, accountId, categoryId, recurrence, installmentId, mei } =
     await req.json()
 
   const current = await db.transaction.findUnique({
@@ -29,6 +29,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       categoryId: categoryId || null,
       recurrence: recurrence || "NONE",
       installmentId: newInstallmentId,
+      mei: type === "INCOME" ? !!mei : false,
     },
     include: { account: true, category: true },
   })

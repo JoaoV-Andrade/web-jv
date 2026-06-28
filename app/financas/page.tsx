@@ -8,6 +8,8 @@ import { MonthlyChart } from "./_components/monthly-chart"
 import { BudgetProgress } from "./_components/budget-progress"
 import { InstallmentsSection } from "./_components/installments-section"
 import { MonthlyPaymentsSection } from "./_components/monthly-payments-section"
+import { MeiSection } from "./_components/mei-section"
+import { meiLimitForYear } from "@/lib/mei"
 import Link from "next/link"
 
 const fmtDate = (d: Date) =>
@@ -40,6 +42,32 @@ export default async function FinancasPage() {
 
   const monthIncome = Number(incomeAgg._sum.amount ?? 0)
   const monthExpense = Number(expenseAgg._sum.amount ?? 0)
+
+  // MEI — faturamento declarado do ano e do mês
+  const yearStart = new Date(`${year}-01-01T00:00:00.000Z`)
+  const yearEnd = new Date(`${year + 1}-01-01T00:00:00.000Z`)
+  const [meiSettingsRaw, meiYearAgg, meiMonthAgg] = await Promise.all([
+    db.meiSettings.findFirst(),
+    db.transaction.aggregate({
+      where: { type: "INCOME", mei: true, date: { gte: yearStart, lt: yearEnd } },
+      _sum: { amount: true },
+    }),
+    db.transaction.aggregate({
+      where: { type: "INCOME", mei: true, date: { gte: monthStart, lt: monthEnd } },
+      _sum: { amount: true },
+    }),
+  ])
+  const meiSettings = meiSettingsRaw
+    ? {
+        openingMonth: meiSettingsRaw.openingMonth,
+        openingYear: meiSettingsRaw.openingYear,
+        annualLimit: Number(meiSettingsRaw.annualLimit),
+        monthlyLimit: Number(meiSettingsRaw.monthlyLimit),
+      }
+    : null
+  const meiYearIncome = Number(meiYearAgg._sum.amount ?? 0)
+  const meiMonthIncome = Number(meiMonthAgg._sum.amount ?? 0)
+  const meiYearLimit = meiLimitForYear(meiSettings, year)
 
   // Últimos 6 meses
   const sixMonthsAgo = new Date(`${year}-${pad(month)}-01T00:00:00.000Z`)
@@ -155,6 +183,15 @@ export default async function FinancasPage() {
         </div>
 
         <SummaryCards income={monthIncome} expense={monthExpense} />
+
+        <MeiSection
+          configured={!!meiSettings}
+          year={year}
+          yearIncome={meiYearIncome}
+          yearLimit={meiYearLimit}
+          monthIncome={meiMonthIncome}
+          monthlyLimit={meiSettings?.monthlyLimit ?? 6750}
+        />
 
         <MonthlyChart data={monthlyData} />
 

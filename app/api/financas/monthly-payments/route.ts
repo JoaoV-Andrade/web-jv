@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { name, amount, dueDay } = await req.json()
+  const { name, amount, dueDay, mei } = await req.json()
 
   if (!name || !amount) {
     return Response.json({ error: "Campos obrigatórios faltando" }, { status: 400 })
@@ -44,6 +44,7 @@ export async function POST(req: Request) {
       name,
       amount: Number(amount),
       dueDay: dueDay ? Number(dueDay) : null,
+      mei: !!mei,
     },
   })
 

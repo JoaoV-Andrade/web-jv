@@ -157,6 +157,7 @@ model MonthlyPayment {
   name         String
   amount       Decimal       @db.Decimal(10, 2)
   dueDay       Int?
+  mei          Boolean       @default(false)
   transactions Transaction[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt

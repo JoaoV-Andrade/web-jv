@@ -152,6 +152,7 @@ export default async function FinancasPage() {
     name: p.name,
     amount: Number(p.amount),
     dueDay: p.dueDay,
+    mei: p.mei,
     paidThisMonth: p.transactions.length > 0,
     transactionId: p.transactions[0]?.id ?? null,
   }))

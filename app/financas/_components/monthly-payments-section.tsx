@@ -10,6 +10,7 @@ export type MonthlyPaymentData = {
   name: string
   amount: number
   dueDay: number | null
+  mei: boolean
   paidThisMonth: boolean
   transactionId: string | null
 }
@@ -141,7 +142,14 @@ function PaymentRow({
       className={`flex items-center justify-between rounded-[var(--radius-sm)] border border-border px-3 py-2.5 ${muted ? "opacity-50" : ""}`}
     >
       <div className="min-w-0">
-        <p className="text-sm text-text truncate">{payment.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-text truncate">{payment.name}</p>
+          {payment.mei && (
+            <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent-soft text-accent">
+              MEI
+            </span>
+          )}
+        </div>
         <p className="text-xs text-text-muted">
           {fmt(payment.amount)}
           {payment.dueDay ? ` · vence dia ${payment.dueDay}` : ""}
@@ -184,6 +192,7 @@ function AddPaymentModal({
   const [name, setName] = useState("")
   const [amount, setAmount] = useState("")
   const [dueDay, setDueDay] = useState("")
+  const [mei, setMei] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
@@ -198,6 +207,7 @@ function AddPaymentModal({
           name,
           amount: Number(amount),
           dueDay: dueDay ? Number(dueDay) : null,
+          mei,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? "Erro ao salvar")
@@ -267,6 +277,16 @@ function AddPaymentModal({
             />
           </div>
 
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={mei}
+              onChange={(e) => setMei(e.target.checked)}
+              className="h-4 w-4 rounded border-border accent-[var(--accent)]"
+            />
+            <span className="text-sm text-text">Declarado no MEI</span>
+          </label>
+
           {error && <p className="text-xs text-danger">{error}</p>}
 
           <div className="flex gap-3 pt-1">
@@ -333,6 +353,7 @@ function MarkPaidModal({
           categoryId: null,
           recurrence: "NONE",
           monthlyPaymentId: payment.id,
+          mei: payment.mei,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? "Erro ao registrar")

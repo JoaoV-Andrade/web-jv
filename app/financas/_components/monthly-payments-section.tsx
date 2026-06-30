@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Trash2, Check, X } from "lucide-react"
+import { Plus, Trash2, Check, X, Pencil } from "lucide-react"
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 
@@ -23,6 +23,7 @@ export function MonthlyPaymentsSection({
   const [payments, setPayments] = useState<MonthlyPaymentData[]>(initialPayments)
   const [addOpen, setAddOpen] = useState(false)
   const [markingPaid, setMarkingPaid] = useState<MonthlyPaymentData | null>(null)
+  const [editing, setEditing] = useState<MonthlyPaymentData | null>(null)
 
   async function handleDelete(id: string) {
     if (!confirm("Excluir este pagamento?")) return
@@ -40,6 +41,11 @@ export function MonthlyPaymentsSection({
   function handlePaid(updated: MonthlyPaymentData) {
     setPayments((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
     setMarkingPaid(null)
+  }
+
+  function handleEdited(updated: MonthlyPaymentData) {
+    setPayments((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+    setEditing(null)
   }
 
   const totalExpected = payments.reduce((s, p) => s + p.amount, 0)
@@ -88,6 +94,7 @@ export function MonthlyPaymentsSection({
                 payment={p}
                 onDelete={() => handleDelete(p.id)}
                 onMarkPaid={() => setMarkingPaid(p)}
+                onEdit={() => setEditing(p)}
               />
             ))}
 
@@ -102,6 +109,7 @@ export function MonthlyPaymentsSection({
                     key={p.id}
                     payment={p}
                     onDelete={() => handleDelete(p.id)}
+                    onEdit={() => setEditing(p)}
                     muted
                   />
                 ))}
@@ -122,6 +130,14 @@ export function MonthlyPaymentsSection({
           onPaid={handlePaid}
         />
       )}
+
+      {editing && (
+        <EditPaymentModal
+          payment={editing}
+          onClose={() => setEditing(null)}
+          onEdited={handleEdited}
+        />
+      )}
     </>
   )
 }
@@ -130,11 +146,13 @@ function PaymentRow({
   payment,
   onDelete,
   onMarkPaid,
+  onEdit,
   muted = false,
 }: {
   payment: MonthlyPaymentData
   onDelete: () => void
   onMarkPaid?: () => void
+  onEdit: () => void
   muted?: boolean
 }) {
   return (
@@ -170,6 +188,13 @@ function PaymentRow({
             </button>
           )
         )}
+        <button
+          onClick={onEdit}
+          className="p-1.5 rounded text-text-muted hover:text-accent hover:bg-surface-2 transition-colors"
+          title="Editar"
+        >
+          <Pencil size={12} />
+        </button>
         <button
           onClick={onDelete}
           className="p-1.5 rounded text-text-muted hover:text-danger hover:bg-surface-2 transition-colors"
@@ -245,6 +270,135 @@ function AddPaymentModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex.: Salário, Freelance..."
+              className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-[var(--radius-sm)] text-text focus:outline-none focus:border-accent"
+              required
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Valor (R$) *</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-[var(--radius-sm)] text-text focus:outline-none focus:border-accent"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Dia do mês (opcional)</label>
+            <input
+              type="number"
+              min="1"
+              max="31"
+              value={dueDay}
+              onChange={(e) => setDueDay(e.target.value)}
+              placeholder="Ex.: 5"
+              className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-[var(--radius-sm)] text-text focus:outline-none focus:border-accent"
+            />
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={mei}
+              onChange={(e) => setMei(e.target.checked)}
+              className="h-4 w-4 rounded border-border accent-[var(--accent)]"
+            />
+            <span className="text-sm text-text">Declarado no MEI</span>
+          </label>
+
+          {error && <p className="text-xs text-danger">{error}</p>}
+
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 text-sm text-text-muted border border-border rounded-[var(--radius-sm)] hover:bg-surface-2 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 py-2.5 text-sm bg-accent text-white font-medium rounded-[var(--radius-sm)] hover:bg-accent-hover disabled:opacity-50 transition-colors"
+            >
+              {saving ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function EditPaymentModal({
+  payment,
+  onClose,
+  onEdited,
+}: {
+  payment: MonthlyPaymentData
+  onClose: () => void
+  onEdited: (p: MonthlyPaymentData) => void
+}) {
+  const [name, setName] = useState(payment.name)
+  const [amount, setAmount] = useState(String(payment.amount))
+  const [dueDay, setDueDay] = useState(payment.dueDay ? String(payment.dueDay) : "")
+  const [mei, setMei] = useState(payment.mei)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/financas/monthly-payments/${payment.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          amount: Number(amount),
+          dueDay: dueDay ? Number(dueDay) : null,
+          mei,
+        }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error ?? "Erro ao salvar")
+      onEdited({ ...payment, name, amount: Number(amount), dueDay: dueDay ? Number(dueDay) : null, mei })
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erro ao salvar")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div
+        className="relative bg-surface border border-border rounded-[var(--radius)] w-full max-w-sm"
+        style={{ boxShadow: "var(--shadow)" }}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="font-medium text-text text-sm">Editar receita mensal</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-[var(--radius-sm)] text-text-muted hover:bg-surface-2 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-5 space-y-3">
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Nome *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               className="w-full px-3 py-2 text-sm bg-bg border border-border rounded-[var(--radius-sm)] text-text focus:outline-none focus:border-accent"
               required
               autoFocus

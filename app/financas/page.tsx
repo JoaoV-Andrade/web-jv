@@ -9,20 +9,47 @@ import { BudgetProgress } from "./_components/budget-progress"
 import { InstallmentsSection } from "./_components/installments-section"
 import { MonthlyPaymentsSection } from "./_components/monthly-payments-section"
 import { MeiSection } from "./_components/mei-section"
+import { MonthNavigator } from "./_components/month-navigator"
 import { meiLimitForYear } from "@/lib/mei"
 import Link from "next/link"
 
 const fmtDate = (d: Date) =>
   d.toISOString().slice(0, 10).split("-").reverse().join("/")
 
-export default async function FinancasPage() {
+export default async function FinancasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mes?: string }>
+}) {
   const session = await getServerSession(authOptions)
   if (!session) redirect("/login")
 
   const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1
+  const curYear = now.getFullYear()
+  const curMonth = now.getMonth() + 1
   const pad = (n: number) => String(n).padStart(2, "0")
+
+  // Mês selecionado via ?mes=YYYY-MM (default: mês atual, sem permitir futuro)
+  let year = curYear
+  let month = curMonth
+  const { mes } = await searchParams
+  if (mes && /^\d{4}-\d{2}$/.test(mes)) {
+    const [y, m] = mes.split("-").map(Number)
+    if (m >= 1 && m <= 12 && (y < curYear || (y === curYear && m <= curMonth))) {
+      year = y
+      month = m
+    }
+  }
+
+  // Navegação entre meses
+  const prev = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 }
+  const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 }
+  const isCurrentMonth = year === curYear && month === curMonth
+  const prevHref = `/financas?mes=${prev.y}-${pad(prev.m)}`
+  const nextHref = isCurrentMonth ? null : `/financas?mes=${next.y}-${pad(next.m)}`
+  const monthLabel = new Date(
+    `${year}-${pad(month)}-15T12:00:00.000Z`
+  ).toLocaleString("pt-BR", { month: "long", year: "numeric" })
   const monthStart = new Date(`${year}-${pad(month)}-01T00:00:00.000Z`)
   const monthEnd = month === 12
     ? new Date(`${year + 1}-01-01T00:00:00.000Z`)
@@ -160,6 +187,7 @@ export default async function FinancasPage() {
   // Últimas transações
   const recent = await db.transaction.findMany({
     take: 5,
+    where: { date: { gte: monthStart, lt: monthEnd } },
     orderBy: { date: "desc" },
     include: { account: true, category: true },
   })
@@ -171,9 +199,11 @@ export default async function FinancasPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-serif text-3xl text-text">Finanças</h1>
-            <p className="text-text-muted text-sm mt-0.5 capitalize">
-              {now.toLocaleString("pt-BR", { month: "long", year: "numeric" })}
-            </p>
+            <MonthNavigator
+              label={monthLabel}
+              prevHref={prevHref}
+              nextHref={nextHref}
+            />
           </div>
           <Link
             href="/financas/transacoes"
